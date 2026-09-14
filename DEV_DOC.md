@@ -1,138 +1,129 @@
 # Developer Documentation
 
-This document explains how a developer can set up, build, and manage the Inception project from scratch.
+## Setting up the environment from scratch
 
-## 1. Prerequisites
+### Prerequisites
 
-- Linux VM (Debian or Alpine)
-- Docker Engine (latest)
-- Docker Compose v2+
-- make
-- OpenSSL
+- A Linux Virtual Machine (Debian or Alpine recommended).
+- Docker Engine and the Docker Compose plugin installed.
+- `make` installed.
+- Root or sudo privileges.
 
 Install Docker on Debian:
 
-    sudo apt update
-    sudo apt install -y docker.io docker-compose-plugin
-    sudo systemctl enable --now docker
-    sudo usermod -aG docker $USER   # then log out and back in
+sudo apt update
+sudo apt install -y docker.io docker-compose-plugin
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+# then log out and back in
 
-## 2. Environment Setup
+### Clone the repository
 
-### a. Clone the repository
+git clone <repository-url>
+cd inception
 
-    git clone <repo-url>
-    cd inception
+### Configuration files
 
-### b. Create the .env file
+Create `srcs/.env` with the following variables:
 
-Create srcs/.env with: DOMAIN_NAME, MYSQL_ROOT_PASSWORD, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD, WORDPRESS_ADMIN_USER, WORDPRESS_ADMIN_PASSWORD, WORDPRESS_ADMIN_EMAIL, WORDPRESS_USER, WORDPRESS_USER_PASSWORD, WORDPRESS_USER_EMAIL.
+DOMAIN_NAME=aelbouz.42.fr
 
-Rules:
-- WORDPRESS_ADMIN_USER must not contain "admin".
-- .env must be in .gitignore.
-- No passwords in any Dockerfile.
+MYSQL_ROOT_PASSWORD=<root-password>
+MYSQL_DATABASE=wordpress
+MYSQL_USER=wp_user
+MYSQL_PASSWORD=<user-password>
 
-### c. Configure the local domain
+WORDPRESS_ADMIN_USER=aelbouz
+WORDPRESS_ADMIN_PASSWORD=<admin-password>
+WORDPRESS_ADMIN_EMAIL=aelbouz@example.com
 
-Add to /etc/hosts: 127.0.0.1 aelbouz.42.fr
+WORDPRESS_USER=regular_user
+WORDPRESS_USER_PASSWORD=<user-password>
+WORDPRESS_USER_EMAIL=user@example.com
 
-### d. Create host data directories
+Add `srcs/.env` to `.gitignore`.
 
-    sudo mkdir -p /home/aelbouz/data/db_data
-    sudo mkdir -p /home/aelbouz/data/wp_data
-    sudo chown -R $USER:$USER /home/aelbouz/data
+### Secrets
 
-## 3. Directory Structure
+All credentials live in `srcs/.env`. They are injected into the containers via `env_file: .env` in `docker-compose.yml`. No password is ever written in a Dockerfile.
 
-inception/
-- Makefile, README.md, USER_DOC.md, DEV_DOC.md, .gitignore
-- srcs/
-  - docker-compose.yml, .env
-  - requirements/
-    - nginx/Dockerfile, nginx/conf/nginx.conf
-    - wordpress/Dockerfile, wordpress/tools/entrypoint.sh
-    - mariadb/Dockerfile, mariadb/conf/my.cnf, mariadb/tools/entrypoint.sh
+### Local domain
 
-## 4. Build and Launch
+Add to `/etc/hosts`:
 
-- make         # build + start
-- make up      # same as make
-- make down    # stop + remove containers, volumes preserved
-- make stop    # stop containers
-- make start   # start stopped containers
-- make ps      # status
-- make logs    # follow logs
-- make clean   # remove containers, images, networks, volumes
-- make fclean  # clean + prune + delete host data
-- make re      # full rebuild
+127.0.0.1 aelbouz.42.fr
 
-First-time build: make
+### Host data directories
 
-Under the hood: docker compose -f srcs/docker-compose.yml up -d --build
+sudo mkdir -p /home/aelbouz/data/db_data
+sudo mkdir -p /home/aelbouz/data/wp_data
+sudo chown -R $USER:$USER /home/aelbouz/data
 
-Verify:
-- docker images   → nginx, wordpress, mariadb
-- docker volume ls → db_data, wp_data
-- docker network ls | grep inception_network
+---
 
-## 5. Managing Containers and Volumes
+## Building and launching with the Makefile
 
-Containers: docker ps, docker ps -a, docker exec -it <name> bash, docker logs -f <name>, docker restart <name>
+From the project root:
 
-Volumes: docker volume ls, docker volume inspect db_data, docker volume rm db_data
+make
 
-Network: docker network inspect inception_network, docker exec -it nginx ping wordpress
+This runs:
 
-## 6. Where data is stored and how it persists
+docker compose -f srcs/docker-compose.yml up -d --build
 
-- db_data: /home/aelbouz/data/db_data → /var/lib/mysql
-- wp_data: /home/aelbouz/data/wp_data → /var/www/html
+Other Makefile targets:
 
-Both volumes use local driver with bind options. Persistence:
-- make down → volumes kept
-- make up → data intact
-- make fclean → data destroyed
+- make up       — build images and start the stack.
+- make down     — stop and remove containers (volumes preserved).
+- make stop     — stop containers without removing them.
+- make start    — start previously stopped containers.
+- make ps       — show container status.
+- make logs     — follow logs from all containers.
+- make clean    — remove containers, images, networks, volumes.
+- make fclean   — clean + prune + delete host data.
+- make re       — full rebuild.
 
-wp_data is shared between WordPress and NGINX containers.
+---
 
-## 7. Rebuilding after a change
+## Managing containers and volumes
 
-- Dockerfile         → make
-- docker-compose.yml → make down && make
-- NGINX config       → docker restart nginx
-- MariaDB my.cnf     → make re
-- WordPress entrypoint → make
-- .env               → make fclean && make
+### Containers
 
-## 8. Debugging Tips
+docker ps
+docker ps -a
+docker exec -it nginx bash
+docker exec -it wordpress bash
+docker exec -it mariadb bash
+docker logs -f wordpress
+docker restart nginx
 
-- Container won't start: docker logs <name>, docker inspect <name>
-- Inspect container: docker exec -it <name> env / ls -la / / ps -o pid,cmd
-- Volume check: docker volume inspect db_data
-- NGINX check: docker exec -it nginx nginx -t / nginx -T
-- PHP-FPM check: docker exec -it wordpress ps aux | grep php-fpm
-- MariaDB check: docker exec -it mariadb mysqladmin ping -u root -p
+### Volumes
 
-## 9. Security Checklist
+docker volume ls
+docker volume inspect db_data
+docker volume inspect wp_data
+docker volume rm db_data
 
-- .env in .gitignore
-- No hardcoded passwords
-- TLS 1.2/1.3 only
-- Only NGINX exposes a port
-- No network: host or --link
-- No tail -f, sleep infinity, while true
-- PID 1 is the daemon
+### Network
 
-## 10. Full Rebuild Procedure
+docker network inspect inception_network
+docker exec -it nginx ping wordpress
+docker exec -it wordpress ping mariadb
 
-    make fclean
-    make
-    sleep 30
-    make ps
-    curl -k -I https://aelbouz.42.fr/
-    docker logs wordpress | grep "installation complete"
+---
 
-## 11. Known Constraints (from the subject)
+## Where the project data is stored and how it persists
 
-Forbidden: network: host, --link, links:, tail -f, bash, sleep infinity, while true, latest tag, hardcoded passwords, pre-built images (other than Alpine/Debian base), bind mounts for the two volumes.
+Two named volumes are used:
+
+- `db_data` — mounted at `/var/lib/mysql` in the mariadb container, physically stored at `/home/aelbouz/data/db_data/` on the host.
+- `wp_data` — mounted at `/var/www/html` in both the wordpress and nginx containers, physically stored at `/home/aelbouz/data/wp_data/` on the host.
+
+Both are declared in `docker-compose.yml` with the `local` driver and `bind` options.
+
+Persistence behaviour:
+
+- `make down` keeps the volumes; `make up` reattaches to them and data is intact.
+- `make fclean` removes the volumes and the host folders; all data is lost.
+
+The `wp_data` volume is shared between WordPress and NGINX: WordPress writes files to it, NGINX reads files from it.
