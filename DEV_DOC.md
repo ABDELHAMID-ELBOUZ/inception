@@ -55,9 +55,15 @@ Add to `/etc/hosts`:
 
 ### Host data directories
 
-sudo mkdir -p /home/aelbouz/data/db_data
-sudo mkdir -p /home/aelbouz/data/wp_data
-sudo chown -R $USER:$USER /home/aelbouz/data
+The Makefile creates these automatically when `make` is run:
+
+/home/aelbouz/data/db_data
+/home/aelbouz/data/wp_data
+
+If you prefer to create them manually:
+
+mkdir -p /home/aelbouz/data/db_data
+mkdir -p /home/aelbouz/data/wp_data
 
 ---
 
@@ -73,11 +79,11 @@ docker compose -f srcs/docker-compose.yml up -d --build
 
 Other Makefile targets:
 
-- make up       — build images and start the stack.
-- make down     — stop and remove containers (volumes preserved).
-- make clean    — remove containers, images, networks, volumes.
-- make fclean   — clean + prune + delete host data.
-- make re       — full rebuild.
+- make up       — build images and start the stack (default target).
+- make down     — stop and remove containers and networks (volumes preserved).
+- make clean    — stop and remove containers, images, networks, and volumes.
+- make fclean   — clean + prune all Docker resources + delete host data.
+- make re       — full rebuild (fclean then all).
 
 ---
 
@@ -120,6 +126,7 @@ Both are declared in `docker-compose.yml` with the `local` driver and `bind` opt
 Persistence behaviour:
 
 - `make down` keeps the volumes; `make up` reattaches to them and data is intact.
-- `make fclean` removes the volumes and the host folders; all data is lost.
+- `make clean` removes the volumes but keeps the host folders.
+- `make fclean` removes the volumes, prunes Docker, and deletes the host folders; all data is lost.
 
 The `wp_data` volume is shared between WordPress and NGINX: WordPress writes files to it, NGINX reads files from it.
