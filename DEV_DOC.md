@@ -75,10 +75,6 @@ Other Makefile targets:
 
 - make up       — build images and start the stack.
 - make down     — stop and remove containers (volumes preserved).
-- make stop     — stop containers without removing them.
-- make start    — start previously stopped containers.
-- make ps       — show container status.
-- make logs     — follow logs from all containers.
 - make clean    — remove containers, images, networks, volumes.
 - make fclean   — clean + prune + delete host data.
 - make re       — full rebuild.
