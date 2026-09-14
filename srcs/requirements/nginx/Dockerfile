@@ -13,16 +13,9 @@ RUN mkdir -p /etc/nginx/ssl
 RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout /etc/nginx/ssl/server.key \
     -out /etc/nginx/ssl/server.crt \
-    -subj "/C=MA/ST=Casablanca/L=Casablanca/O=42/CN=${DOMAIN_NAME}"
+    -subj "/CN=aelbouz.42.fr"
 
 # Copy custom nginx configuration
-COPY conf/nginx.conf /etc/nginx/nginx.conf
+COPY conf/nginx.conf  /etc/nginx/conf.d/inception.conf
 
-# Remove default site (optional)
-RUN rm -f /etc/nginx/sites-enabled/default
-
-# Expose port 443 only (as per subject)
-EXPOSE 443
-
-# Start nginx in foreground (no daemon, so it becomes PID 1)
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["nginx", "-g", "daemon off;"]
